@@ -1,0 +1,1510 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ==================== ENUMS ====================
+
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  CONSULTANT
+  TEMPORARY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  ON_LEAVE
+  WEEK_OFF
+  HOLIDAY
+  WORK_FROM_HOME
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+  PRIVILEGE
+  MATERNITY
+  PATERNITY
+  COMPENSATORY
+  UNPAID
+  BEREAVEMENT
+  MARRIAGE
+}
+
+enum PayrollStatus {
+  DRAFT
+  PROCESSING
+  PROCESSED
+  PAID
+  FAILED
+}
+
+enum PaymentMode {
+  BANK_TRANSFER
+  CHEQUE
+  CASH
+  UPI
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
+}
+
+enum PerformanceRating {
+  OUTSTANDING
+  EXCEEDS_EXPECTATIONS
+  MEETS_EXPECTATIONS
+  NEEDS_IMPROVEMENT
+  UNSATISFACTORY
+}
+
+enum GoalStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ALLOCATED
+  UNDER_MAINTENANCE
+  RETIRED
+  LOST
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  ON_HOLD
+  CANCELLED
+}
+
+enum CandidateStatus {
+  NEW
+  SCREENING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  SELECTED
+  REJECTED
+  OFFER_SENT
+  OFFER_ACCEPTED
+  OFFER_DECLINED
+  JOINED
+}
+
+enum DocumentType {
+  AADHAAR
+  PAN
+  PASSPORT
+  DRIVING_LICENSE
+  VOTER_ID
+  EDUCATION_CERTIFICATE
+  EXPERIENCE_LETTER
+  OFFER_LETTER
+  APPOINTMENT_LETTER
+  RELIEVING_LETTER
+  SALARY_SLIP
+  BANK_STATEMENT
+  OTHER
+}
+
+enum NotificationType {
+  LEAVE_REQUEST
+  ATTENDANCE_ALERT
+  PAYROLL_PROCESSED
+  PERFORMANCE_REVIEW
+  BIRTHDAY
+  ANNIVERSARY
+  POLICY_UPDATE
+  ANNOUNCEMENT
+  ASSET_ALLOCATION
+  EXPENSE_APPROVED
+  TRAINING_SCHEDULED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  APPROVE
+  REJECT
+}
+
+enum AuditModule {
+  USER
+  EMPLOYEE
+  LEAVE
+  ATTENDANCE
+  PAYROLL
+  TICKET
+  ROLE
+  ORGANIZATION
+  SETTINGS
+}
+
+enum SettingCategory {
+  GENERAL
+  EMAIL
+  PAYROLL
+  ATTENDANCE
+  LEAVE
+  SECURITY
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  APPROVE
+  EXPORT
+}
+
+enum PermissionModule {
+  EMPLOYEE
+  ATTENDANCE
+  LEAVE
+  PAYROLL
+  TICKET
+  ROLE
+  SETTINGS
+  ANNOUNCEMENT
+}
+
+enum HalfDayPeriod {
+  FIRST_HALF
+  SECOND_HALF
+}
+
+enum Relationship {
+  FATHER
+  MOTHER
+  SPOUSE
+  CHILD
+  SIBLING
+}
+
+
+// ==================== ORGANIZATION & TENANT ====================
+
+model Organization {
+  id                String              @id @default(cuid())
+  name              String
+  displayName       String
+  logo              String?
+  website           String?
+  email             String              @unique
+  phone             String?
+  address           String?
+  city              String?
+  state             String?
+  country           String              @default("India")
+  pincode           String?
+  gstin             String?             @unique
+  pan               String?             @unique
+  tan               String?
+  pfNumber          String?
+  esiNumber         String?
+  establishmentDate DateTime?
+  industryType      String?
+  companySize       String?
+  fiscalYearStart   Int                 @default(4) // April
+  weekendDays       String[]            @default(["SATURDAY", "SUNDAY"])
+  isActive          Boolean             @default(true)
+  settings          Json?               // Organization-specific settings
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  users             User[]
+  departments       Department[]
+  designations      Designation[]
+  roles             Role[]
+  branches          Branch[]
+  shifts            Shift[]
+  holidays          Holiday[]
+  leavePolicies     LeavePolicy[]
+  salaryStructures  SalaryStructure[]
+  payrollRuns       PayrollRun[]
+  assets            Asset[]
+  jobPostings       JobPosting[]
+  trainingPrograms  TrainingProgram[]
+  announcements     Announcement[]
+  policies          Policy[]
+
+  @@index([gstin])
+  @@index([isActive])
+}
+
+model Branch {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  address        String?
+  city           String?
+  state          String?
+  country        String       @default("India")
+  pincode        String?
+  phone          String?
+  email          String?
+  isHeadOffice   Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          User[]
+  departments    Department[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+// ==================== ROLES & PERMISSIONS ====================
+
+model Role {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String       // e.g., "super_admin", "hr_manager", "employee"
+  displayName    String       // e.g., "Super Admin", "HR Manager", "Employee"
+  description    String?
+  level          Int          @default(0) // Hierarchy level (0 = highest, used for approval workflows)
+  isSystem       Boolean      @default(false) // System roles can't be deleted
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions    RolePermission[]
+  users          User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([isSystem])
+  @@index([level])
+}
+
+// This is a junction table between Role and Permission
+// Allows many-to-many relationship with additional metadata
+model RolePermission {
+  id          String      @id @default(cuid())
+  roleId      String
+  permissionId String
+  conditions  Json?       // Role-specific conditions (e.g., can only view own department)
+  isGranted   Boolean     @default(true) // false for explicit denials
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  role        Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission  Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// Master list of all possible permissions in the system
+model Permission {
+  id          String      @id @default(cuid())
+  module      PermissionModule
+  action      PermissionAction
+  resource    String?     // Specific resource if needed (e.g., "salary_details", "personal_info")
+  description String?     // Human-readable description
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  roles       RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([module, action, resource])
+  @@index([module])
+  @@index([action])
+}
+
+// User-specific permission overrides (for exceptional cases)
+model UserPermission {
+  id          String      @id @default(cuid())
+  userId      String
+  permissionId String
+  isGranted   Boolean     // true = grant, false = revoke
+  grantedBy   String?     // User ID who granted this permission
+  reason      String?     // Why this override was needed
+  expiresAt   DateTime?   // Optional expiration
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@index([expiresAt])
+}
+
+// ==================== USER & EMPLOYEE ====================
+
+model User {
+  id                  String              @id @default(cuid())
+  clerkId             String              @unique // Clerk user ID
+  organizationId      String
+  branchId            String?
+  roleId              String
+  departmentId        String?
+  designationId       String?
+  reportingManagerId  String?             // Self-referencing for hierarchy
+  
+  // Basic Info
+  employeeCode        String              @unique // Unique within organization
+  email               String              @unique // Unique within organization
+  personalEmail       String?
+  phone               String?
+  alternatePhone      String?
+  firstName           String
+  middleName          String?
+  lastName            String
+  displayName         String?
+  avatar              String?
+  dateOfBirth         DateTime?
+  gender              Gender?
+  bloodGroup          String?
+  maritalStatus       MaritalStatus?
+  nationality         String              @default("Indian")
+  
+  // Employment Info
+  dateOfJoining       DateTime
+  dateOfConfirmation  DateTime?
+  probationPeriod     Int?                // in months
+  noticePeriod        Int?                // in days
+  employmentType      EmploymentType      @default(FULL_TIME)
+  workLocation        String?
+  
+  // Exit Info
+  dateOfLeaving       DateTime?
+  resignationDate     DateTime?
+  exitReason          String?
+  exitNotes           String?
+  
+  // Status
+  status              UserStatus          @default(ACTIVE)
+  isEmailVerified     Boolean             @default(false)
+  isPhoneVerified     Boolean             @default(false)
+  
+  // Preferences
+  timezone            String              @default("Asia/Kolkata")
+  language            String              @default("en")
+  dateFormat          String              @default("DD/MM/YYYY")
+  
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  lastLoginAt         DateTime?
+
+  // Relations
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch              Branch?             @relation(fields: [branchId], references: [id])
+  role                Role                @relation(fields: [roleId], references: [id])
+  department          Department?         @relation(fields: [departmentId], references: [id])
+  designation         Designation?        @relation(fields: [designationId], references: [id])
+  reportingManager    User?               @relation("UserHierarchy", fields: [reportingManagerId], references: [id])
+  subordinates        User[]              @relation("UserHierarchy")
+  
+  profile             EmployeeProfile?
+  addresses           Address[]
+  emergencyContacts   EmergencyContact[]
+  bankDetails         BankDetail[]
+  documents           Document[]
+  educationDetails    EducationDetail[]
+  experienceDetails   ExperienceDetail[]
+  familyDetails       FamilyDetail[]
+  userPermissions     UserPermission[]
+  
+  attendanceRecords   AttendanceRecord[]
+  leaveBalances       LeaveBalance[]
+  leaveRequests       LeaveRequest[]
+  approvedLeaves      LeaveRequest[]      @relation("ApprovedBy")
+  
+  salaryDetails       SalaryDetail?
+  payslips            Payslip[]
+  
+  goals               Goal[]
+  reviews             Review[]
+  givenReviews        Review[]            @relation("ReviewerRelation")
+  feedback            Feedback[]
+  givenFeedback       Feedback[]          @relation("FeedbackGiver")
+  
+  assetAllocations    AssetAllocation[]
+  
+  expenseClaims       ExpenseClaim[]
+  approvedExpenses    ExpenseClaim[]      @relation("ExpenseApprover")
+  
+  trainingsAttended   TrainingAttendee[]
+  
+  createdJobs         JobPosting[]        @relation("JobCreator")
+  interviewsAsPanel   Interview[]
+  
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  
+  @@unique([organizationId, employeeCode])
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([clerkId])
+  @@index([departmentId])
+  @@index([designationId])
+  @@index([reportingManagerId])
+  @@index([status])
+}
+
+model EmployeeProfile {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  
+  // Personal Details
+  fatherName              String?
+  motherName              String?
+  spouseName              String?
+  passportNumber          String?
+  passportExpiryDate      DateTime?
+  aadhaarNumber           String?
+  panNumber               String?
+  uanNumber               String?  // Universal Account Number (PF)
+  
+  // Additional Info
+  hobbies                 String?
+  skills                  String[]
+  languages               String[]
+  
+  // Social Links
+  linkedinUrl             String?
+  githubUrl               String?
+  twitterUrl              String?
+  
+  // Emergency
+  medicalConditions       String?
+  allergies               String?
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model Address {
+  id              String   @id @default(cuid())
+  userId          String
+  type            String   // "CURRENT", "PERMANENT"
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String
+  country         String   @default("India")
+  pincode         String
+  isPrimary       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model EmergencyContact {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  relationship    String
+  phone           String
+  alternatePhone  String?
+  email           String?  
+  address         String?
+  isPrimary       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model BankDetail {
+  id              String   @id @default(cuid())
+  userId          String
+  accountHolderName String
+  accountNumber   String
+  ifscCode        String
+  bankName        String
+  branchName      String?
+  accountType     String?  // SAVINGS, CURRENT
+  isPrimary       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model Document {
+  id              String       @id @default(cuid())
+  userId          String
+  type            DocumentType
+  title           String
+  documentNumber  String?
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  mimeType        String?
+  expiryDate      DateTime?
+  isVerified      Boolean      @default(false)
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([type])
+}
+
+model EducationDetail {
+  id              String   @id @default(cuid())
+  userId          String
+  degree          String
+  fieldOfStudy    String?
+  institution     String
+  university      String?
+  startDate       DateTime
+  endDate         DateTime?
+  grade           String?
+  percentage      Float?
+  isHighest       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model ExperienceDetail {
+  id              String   @id @default(cuid())
+  userId          String
+  companyName     String
+  designation     String
+  employmentType  String?
+  startDate       DateTime
+  endDate         DateTime?
+  isCurrent       Boolean  @default(false)
+  location        String?
+  responsibilities String?
+  reasonForLeaving String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model FamilyDetail {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  relationship    Relationship
+  dateOfBirth     DateTime?
+  occupation      String?
+  phone           String?
+  isDependent     Boolean  @default(false)
+  isNominee       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// ==================== DEPARTMENT & DESIGNATION ====================
+
+model Department {
+  id              String       @id @default(cuid())
+  organizationId  String
+  branchId        String?
+  parentId        String?      // For sub-departments
+  name            String
+  code            String
+  description     String?
+  headOfDepartment String?     // User ID
+  costCenter      String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch          Branch?      @relation(fields: [branchId], references: [id])
+  parent          Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  subDepartments  Department[] @relation("DepartmentHierarchy")
+  users           User[]
+  designations    Designation[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([parentId])
+}
+
+model Designation {
+  id              String       @id @default(cuid())
+  organizationId  String
+  departmentId    String?
+  name            String
+  code            String
+  level           Int          @default(0) // Hierarchy level
+  description     String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department      Department?  @relation(fields: [departmentId], references: [id])
+  users           User[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([departmentId])
+}
+
+// ==================== ATTENDANCE ====================
+
+model Shift {
+  id              String            @id @default(cuid())
+  organizationId  String
+  name            String
+  code            String
+  startTime       String            // Format: "09:00"
+  endTime         String            // Format: "18:00"
+  gracePeriod     Int               @default(15) // minutes
+  breakDuration   Int               @default(60) // minutes
+  workingHours    Float             @default(9)
+  weeklyOffDays   String[]          @default(["SATURDAY", "SUNDAY"])
+  isNightShift    Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+  
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+model AttendanceRecord {
+  id              String            @id @default(cuid())
+  userId          String
+  shiftId         String?
+  date            DateTime          @db.Date
+  checkIn         DateTime?
+  checkOut        DateTime?
+  checkInLocation String?           // GPS coordinates or location name
+  checkOutLocation String?
+  status          AttendanceStatus  @default(ABSENT)
+  workingHours    Float?
+  overtimeHours   Float?
+  lateBy          Int?              // minutes
+  earlyBy         Int?              // minutes
+  breakDuration   Int?              // minutes
+  isRegularized   Boolean           @default(false)
+  regularizedBy   String?
+  regularizationReason String?
+  remarks         String?
+  ipAddress       String?
+  deviceInfo      String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift           Shift?            @relation(fields: [shiftId], references: [id])
+  
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
+model Holiday {
+  id              String       @id @default(cuid())
+  organizationId  String
+  name            String
+  date            DateTime     @db.Date
+  type            String       @default("PUBLIC") // PUBLIC, OPTIONAL, RESTRICTED
+  description     String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, date])
+  @@index([organizationId])
+  @@index([date])
+}
+
+// ==================== LEAVE MANAGEMENT ====================
+
+model LeavePolicy {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  name                  String
+  leaveType             LeaveType
+  applicableFor         String?      // Department/Designation filter
+  daysPerYear           Float
+  maxConsecutiveDays    Int?
+  canCarryForward       Boolean      @default(false)
+  maxCarryForward       Int?
+  canEncash             Boolean      @default(false)
+  maxEncashment         Int?
+  minServiceMonths      Int          @default(0)
+  applicableToGender    String?      // For maternity/paternity
+  requiresDocumentation Boolean      @default(false)
+  allowNegativeBalance  Boolean      @default(false)
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaveBalances         LeaveBalance[]
+  leaveRequests         LeaveRequest[]
+  
+  @@unique([organizationId, leaveType])
+  @@index([organizationId])
+}
+
+model LeaveBalance {
+  id              String      @id @default(cuid())
+  userId          String
+  policyId        String
+  year            Int
+  allocated       Float
+  used            Float       @default(0)
+  available       Float
+  carriedForward  Float       @default(0)
+  encashed        Float       @default(0)
+  lapsed          Float       @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy          LeavePolicy @relation(fields: [policyId], references: [id])
+  
+  @@unique([userId, policyId, year])
+  @@index([userId])
+  @@index([year])
+}
+
+model LeaveRequest {
+  id              String       @id @default(cuid())
+  userId          String
+  policyId        String
+  fromDate        DateTime     @db.Date
+  toDate          DateTime     @db.Date
+  numberOfDays    Float
+  leaveType       LeaveType
+  reason          String
+  contactNumber   String?
+  contactAddress  String?
+  status          LeaveStatus  @default(PENDING)
+  appliedAt       DateTime     @default(now())
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  cancelledAt     DateTime?
+  cancellationReason String?
+  isHalfDay       Boolean      @default(false)
+  halfDayPeriod   HalfDayPeriod?
+  attachments     String[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy          LeavePolicy  @relation(fields: [policyId], references: [id])
+  approver        User?        @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([fromDate, toDate])
+}
+
+// ==================== PAYROLL ====================
+
+model SalaryStructure {
+  id              String            @id @default(cuid())
+  organizationId  String
+  name            String
+  description     String?
+  effectiveFrom   DateTime          @db.Date
+  effectiveTo     DateTime?         @db.Date
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  components      SalaryComponent[]
+  salaryDetails   SalaryDetail[]
+  
+  @@index([organizationId])
+}
+
+model SalaryComponent {
+  id              String              @id @default(cuid())
+  structureId     String
+  name            String
+  displayName     String
+  type            SalaryComponentType
+  calculationType String              // FIXED, PERCENTAGE, FORMULA
+  value           Decimal?            @db.Decimal(12,2)
+  formula         String?
+  isStatutory     Boolean             @default(false)
+  isTaxable       Boolean             @default(true)
+  displayOrder    Int                 @default(0)
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  structure       SalaryStructure     @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  
+  @@index([structureId])
+}
+
+model SalaryDetail {
+  id               String          @id @default(cuid())
+  userId           String          @unique
+  structureId      String
+  ctc              Decimal         @db.Decimal(12,2)
+  grossSalary      Decimal         @db.Decimal(12,2)
+  netSalary        Decimal         @db.Decimal(12,2)
+  basicSalary      Decimal         @db.Decimal(12,2)
+  hra              Decimal?        @db.Decimal(12,2)
+  specialAllowance Decimal?        @db.Decimal(12,2)
+  otherAllowances  Json?
+  pfEmployee       Decimal?        @db.Decimal(12,2)
+  pfEmployer       Decimal?        @db.Decimal(12,2)
+  esi              Decimal?        @db.Decimal(12,2)
+  professionalTax  Decimal?        @db.Decimal(12,2)
+  tds              Decimal?        @db.Decimal(12,2)
+  otherDeductions  Json?
+  effectiveFrom    DateTime        @db.Date
+  effectiveTo      DateTime?       @db.Date
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  structure        SalaryStructure @relation(fields: [structureId], references: [id])
+
+  @@index([userId, isActive])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+
+model PayrollRun {
+  id              String        @id @default(cuid())
+  organizationId  String
+  month           Int
+  year            Int
+  fromDate        DateTime      @db.Date
+  toDate          DateTime      @db.Date
+  status          PayrollStatus @default(DRAFT)
+  processedBy     String?
+  processedAt     DateTime?
+  totalEmployees  Int           @default(0)
+  totalAmount     Decimal       @db.Decimal(14,2) @default(0)
+  isLocked        Boolean       @default(false)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payslips        Payslip[]
+  
+  @@unique([organizationId, month, year])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Payslip {
+  id              String      @id @default(cuid())
+  payrollRunId    String
+  userId          String      
+  month           Int
+  year            Int
+  paymentDate     DateTime?   @db.Date
+  paymentMode     PaymentMode?
+
+  basicSalary     Decimal     @db.Decimal(12,2)
+  hra             Decimal?    @db.Decimal(12,2)
+  allowances      Json?
+  grossSalary     Decimal     @db.Decimal(12,2)
+
+  pfEmployee      Decimal?    @db.Decimal(12,2)
+  esi             Decimal?    @db.Decimal(12,2)
+  professionalTax Decimal?    @db.Decimal(12,2)
+  tds             Decimal?    @db.Decimal(12,2)
+  otherDeductions Json?
+  totalDeductions Decimal     @db.Decimal(12,2)
+
+  netSalary       Decimal     @db.Decimal(12,2)
+
+  workingDays     Int
+  paidDays        Decimal     @db.Decimal(5,2)
+  lop             Decimal?    @db.Decimal(5,2)
+  overtime        Decimal?    @db.Decimal(12,2)
+  bonus           Decimal?    @db.Decimal(12,2)
+  reimbursements  Decimal?    @db.Decimal(12,2)
+
+  isPaid          Boolean     @default(false)
+  isLocked        Boolean     @default(false)
+  pdfUrl          String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  payrollRun      PayrollRun  @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+  @@index([payrollRunId])
+  @@index([userId])
+}
+
+
+// ==================== PERFORMANCE MANAGEMENT ====================
+
+model PerformanceCycle {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  reviewStartDate DateTime @db.Date
+  reviewEndDate   DateTime @db.Date
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  goals           Goal[]
+  reviews         Review[]
+  
+  @@index([organizationId])
+}
+
+model Goal {
+  id              String      @id @default(cuid())
+  cycleId         String?
+  userId          String
+  title           String
+  description     String?
+  category        String?     // INDIVIDUAL, TEAM, ORGANIZATIONAL
+  weightage       Float?      // Percentage
+  targetValue     String?
+  currentValue    String?
+  status          GoalStatus  @default(NOT_STARTED)
+  startDate       DateTime    @db.Date
+  dueDate         DateTime    @db.Date
+  completedAt     DateTime?
+  progress        Int         @default(0) // 0-100
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  cycle           PerformanceCycle? @relation(fields: [cycleId], references: [id])
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model Review {
+  id              String             @id @default(cuid())
+  cycleId         String
+  userId          String
+  reviewerId      String
+  reviewType      String             // SELF, MANAGER, PEER, SUBORDINATE
+  overallRating   PerformanceRating?
+  strengths       String?
+  areasOfImprovement String?
+  achievements    String?
+  comments        String?
+  ratings         Json?              // Competency-wise ratings
+  status          String             @default("DRAFT") // DRAFT, SUBMITTED, COMPLETED
+  submittedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  cycle           PerformanceCycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer        User               @relation("ReviewerRelation", fields: [reviewerId], references: [id])
+  
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([cycleId])
+}
+
+model Feedback {
+  id              String   @id @default(cuid())
+  userId          String
+  giverId         String
+  feedbackType    String   // POSITIVE, CONSTRUCTIVE, GENERAL
+  category        String?  // TECHNICAL, BEHAVIORAL, COMMUNICATION
+  message         String
+  isAnonymous     Boolean  @default(false)
+  isAcknowledged  Boolean  @default(false)
+  acknowledgedAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giver           User     @relation("FeedbackGiver", fields: [giverId], references: [id])
+  
+  @@index([userId])
+  @@index([giverId])
+}
+
+// ==================== ASSET MANAGEMENT ====================
+
+model Asset {
+  id              String            @id @default(cuid())
+  organizationId  String
+  assetCode       String
+  name            String
+  category        String            // LAPTOP, DESKTOP, MOBILE, FURNITURE, VEHICLE
+  brand           String?
+  model           String?
+  serialNumber    String?
+  purchaseDate    DateTime?         @db.Date
+  purchasePrice   Float?
+  warrantyExpiry  DateTime?         @db.Date
+  status          AssetStatus       @default(AVAILABLE)
+  condition       String?           // EXCELLENT, GOOD, FAIR, POOR
+  location        String?
+  description     String?
+  specifications  Json?
+  imageUrl        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  allocations     AssetAllocation[]
+  
+  @@unique([organizationId, assetCode])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model AssetAllocation {
+  id              String    @id @default(cuid())
+  assetId         String
+  userId          String
+  allocatedDate   DateTime  @db.Date
+  returnDate      DateTime? @db.Date
+  expectedReturnDate DateTime? @db.Date
+  allocationNotes String?
+  returnNotes     String?
+  condition       String?
+  isReturned      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([assetId])
+  @@index([userId])
+}
+
+// ==================== EXPENSE MANAGEMENT ====================
+
+model ExpenseClaim {
+  id              String        @id @default(cuid())
+  userId          String
+  claimNumber     String
+  title           String
+  totalAmount     Float
+  approvedAmount  Float?
+  status          ExpenseStatus @default(DRAFT)
+  submittedAt     DateTime?
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  paidAt          DateTime?
+  paymentReference String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver        User?         @relation("ExpenseApprover", fields: [approvedBy], references: [id])
+  items           ExpenseItem[]
+  
+  @@unique([userId, claimNumber])
+  @@index([userId])
+  @@index([status])
+}
+
+model ExpenseItem {
+  id              String       @id @default(cuid())
+  claimId         String
+  category        String       // TRAVEL, FOOD, ACCOMMODATION, FUEL, SUPPLIES
+  date            DateTime     @db.Date
+  amount          Float
+  description     String
+  merchant        String?
+  receiptUrl      String?
+  isBillable      Boolean      @default(false)
+  projectId       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  claim           ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  
+  @@index([claimId])
+}
+
+// ==================== RECRUITMENT ====================
+
+model JobPosting {
+  id              String       @id @default(cuid())
+  organizationId  String
+  jobCode         String
+  title           String
+  departmentId    String?
+  designationId   String?
+  employmentType  EmploymentType @default(FULL_TIME)
+  location        String?
+  minExperience   Int?
+  maxExperience   Int?
+  minSalary       Float?
+  maxSalary       Float?
+  openings        Int          @default(1)
+  description     String
+  requirements    String?
+  responsibilities String?
+  skills          String[]
+  benefits        String?
+  status          JobStatus    @default(OPEN)
+  publishedAt     DateTime?
+  closedAt        DateTime?
+  createdBy       String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator         User         @relation("JobCreator", fields: [createdBy], references: [id])
+  candidates      Candidate[]
+  
+  @@unique([organizationId, jobCode])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Candidate {
+  id              String          @id @default(cuid())
+  jobPostingId    String
+  firstName       String
+  lastName        String
+  email           String        @unique
+  phone           String
+  resumeUrl       String
+  portfolioUrl    String?
+  linkedinUrl     String?
+  currentCompany  String?
+  currentDesignation String?
+  totalExperience Float?
+  currentSalary   Float?
+  expectedSalary  Float?
+  noticePeriod    Int?            // in days
+  skills          String[]
+  status          CandidateStatus @default(NEW)
+  appliedAt       DateTime        @default(now())
+  source          String?         // CAREER_SITE, REFERRAL, JOB_BOARD
+  referredBy      String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  jobPosting      JobPosting      @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  interviews      Interview[]
+  
+  @@index([jobPostingId])
+  @@index([email])
+  @@index([status])
+}
+
+model Interview {
+  id              String   @id @default(cuid())
+  candidateId     String
+  round           Int
+  roundName       String   // SCREENING, TECHNICAL, HR, FINAL
+  scheduledAt     DateTime
+  duration        Int      // minutes
+  mode            String   // IN_PERSON, VIDEO, PHONE
+  meetingLink     String?
+  location        String?
+  interviewerId   String
+  status          String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  feedback        String?
+  rating          Int?     // 1-5
+  recommendation  String?  // STRONG_HIRE, HIRE, NO_HIRE
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  interviewer     User      @relation(fields: [interviewerId], references: [id])
+  
+  @@index([candidateId])
+  @@index([interviewerId])
+}
+
+// ==================== TRAINING & DEVELOPMENT ====================
+
+model TrainingProgram {
+  id              String             @id @default(cuid())
+  organizationId  String
+  title           String
+  description     String?
+  category        String?            // TECHNICAL, SOFT_SKILLS, COMPLIANCE, LEADERSHIP
+  trainer         String?
+  trainerType     String?            // INTERNAL, EXTERNAL
+  mode            String             @default("OFFLINE") // ONLINE, OFFLINE, HYBRID
+  duration        Int?               // hours
+  maxParticipants Int?
+  cost            Float?
+  startDate       DateTime           @db.Date
+  endDate         DateTime?          @db.Date
+  location        String?
+  meetingLink     String?
+  materials       String[]
+  isActive        Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendees       TrainingAttendee[]
+  
+  @@index([organizationId])
+}
+
+model TrainingAttendee {
+  id              String          @id @default(cuid())
+  programId       String
+  userId          String
+  status          String          @default("REGISTERED") // REGISTERED, ATTENDED, COMPLETED, CANCELLED
+  attendancePercentage Float?
+  feedback        String?
+  rating          Int?            // 1-5
+  certificateUrl  String?
+  registeredAt    DateTime        @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  program         TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([programId, userId])
+  @@index([programId])
+  @@index([userId])
+}
+
+// ==================== COMMUNICATION ====================
+
+model Announcement {
+  id              String       @id @default(cuid())
+  organizationId  String
+  title           String
+  content         String
+  category        String?      // GENERAL, POLICY, EVENT, URGENT
+  priority        String       @default("NORMAL") // HIGH, NORMAL, LOW
+  targetAudience  String       @default("ALL") // ALL, DEPARTMENT, DESIGNATION
+  departmentIds   String[]
+  designationIds  String[]
+  attachments     String[]
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  createdBy       String
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([publishedAt])
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  type            NotificationType
+  title           String
+  message         String
+  link            String?
+  data            Json?
+  isRead          Boolean          @default(false)
+  readAt          DateTime?
+  createdAt       DateTime         @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ==================== POLICIES & COMPLIANCE ====================
+
+model Policy {
+  id              String       @id @default(cuid())
+  organizationId  String
+  title           String
+  category        String       // HR, IT, SECURITY, GENERAL
+  content         String
+  version         String       @default("1.0")
+  effectiveFrom   DateTime     @db.Date
+  effectiveTo     DateTime?    @db.Date
+  documentUrl     String?
+  requiresAcknowledgement Boolean @default(false)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgements PolicyAcknowledgement[]
+  
+  @@index([organizationId])
+  @@index([category])
+}
+
+model PolicyAcknowledgement {
+  id              String   @id @default(cuid())
+  policyId        String
+  userId          String
+  acknowledgedAt  DateTime @default(now())
+  ipAddress       String?
+
+  policy          Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  
+  @@unique([policyId, userId])
+  @@index([policyId])
+  @@index([userId])
+}
+
+// ==================== AUDIT & LOGS ====================
+
+model AuditLog {
+  id              String      @id @default(cuid())
+  userId          String?
+  action          AuditAction
+  module          AuditModule
+  recordId        String?
+  recordType      String?
+  oldValues       Json?
+  newValues       Json?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ==================== SYSTEM SETTINGS ====================
+
+model SystemSetting {
+  id              String   @id @default(cuid())
+  organizationId  String?  // null for global settings
+  key             String
+  value           String
+  dataType        String   @default("STRING") // STRING, NUMBER, BOOLEAN, JSON
+  category        SettingCategory?
+  description     String?
+  isEncrypted     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@index([category])
+}
