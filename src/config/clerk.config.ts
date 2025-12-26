@@ -2,42 +2,42 @@
 // src/config/clerk.config.ts
 // Clerk authentication configuration
 // ============================================
-import { Clerk } froM '@clerk/clerk-sdk-node';
+import { createClerkClient } from '@clerk/express';
 import { getEnv } from './env.config';
  
 class ClerkConfig {
-  private static instance: ReturnType<typeof Clerk>;
+  private static instance: ReturnType<typeof createClerkClient>;
   private static isInitialized: boolean = false;
  
   private constructor() {}
- 
+
   /**
    * Get Clerk client instance (singleton)
    */
-  public static getInstance(): ReturnType<typeof Clerk> {
+  public static getInstance(): ReturnType<typeof createClerkClient> {
     if (!ClerkConfig.instance) {
-      const secretKey = getEnv.clerk.secretKey();
- 
+      const secretKey = getEnv.CLERK_SECRET_KEY;
+
       if (!secretKey) {
         throw new Error('❌ CLERK_SECRET_KEY is not configured');
       }
- 
-      ClerkConfig.instance = Clerk({ secretKey });
+
+      ClerkConfig.instance = createClerkClient({ secretKey });
       ClerkConfig.isInitialized = true;
       
       console.log('✅ Clerk initialized successfully');
     }
- 
+
     return ClerkConfig.instance;
   }
- 
+
   /**
    * Check if Clerk is ready
    */
   public static isReady(): boolean {
     return ClerkConfig.isInitialized;
   }
- 
+
   /**
    * Get user by Clerk ID
    */
@@ -53,17 +53,17 @@ class ClerkConfig {
       throw new Error(`Failed to fetch user from Clerk: ${error.message}`);
     }
   }
- 
+
   /**
    * Get user by email
    */
   public static async getUserByEmail(email: string) {
     try {
       const clerk = ClerkConfig.getInstance();
-      const users = await clerk.users.getUserList({ emailAddress: [email] });
+      const response = await clerk.users.getUserList({ emailAddress: [email] });
       
-      if (users && users.length > 0) {
-        return users[0];
+      if (response.data && response.data.length > 0) {
+        return response.data[0];
       }
       
       return null;
@@ -72,22 +72,21 @@ class ClerkConfig {
       throw new Error(`Failed to fetch user by email: ${error.message}`);
     }
   }
- 
+
   /**
-   * Verify Clerk webhook signature
+   * Verify Clerk webhook signature using Svix
    */
-  public static verifyWebhookSignature(
-    payload: string,
+  public static async verifyWebhook(
+    payload: string | Buffer,
     headers: Record<string, string | string[] | undefined>
-  ): boolean {
+  ) {
     try {
-      const webhookSecret = getEnv.clerk.webhookSecret();
- 
+      const webhookSecret = getEnv.CLERK_WEBHOOK_SECRET;
+
       if (!webhookSecret) {
-        console.error('❌ CLERK_WEBHOOK_SECRET is not configured');
-        return false;
+        throw new Error('❌ CLERK_WEBHOOK_SECRET is not configured');
       }
- 
+
       // Get Svix headers
       const svixId = Array.isArray(headers['svix-id'])
         ? headers['svix-id'][0]
@@ -98,35 +97,31 @@ class ClerkConfig {
       const svixSignature = Array.isArray(headers['svix-signature'])
         ? headers['svix-signature'][0]
         : headers['svix-signature'];
- 
+
       if (!svixId || !svixTimestamp || !svixSignature) {
-        console.error('❌ Missing required Svix webhook headers');
-        return false;
+        throw new Error('❌ Missing required Svix webhook headers');
       }
- 
-      // Verify signature using Svix
-      try {
-        const { Webhook } = require('svix');
-        const wh = new Webhook(webhookSecret);
- 
-        wh.verify(payload, {
-          'svix-id': svixId,
-          'svix-timestamp': svixTimestamp,
-          'svix-signature': svixSignature,
-        });
- 
-        console.log('✅ Webhook signature verified successfully');
-        return true;
-      } catch (err: any) {
-        console.error('❌ Webhook signature verification failed:', err.message);
-        return false;
-      }
+
+      // Verify using Svix
+      const { Webhook } = await import('svix');
+      const wh = new Webhook(webhookSecret);
+      
+      const payloadString = typeof payload === 'string' ? payload : payload.toString();
+      
+      const evt = wh.verify(payloadString, {
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': svixSignature,
+      });
+
+      console.log('✅ Webhook signature verified successfully');
+      return evt;
     } catch (error: any) {
-      console.error('❌ Error verifying webhook signature:', error.message);
-      return false;
+      console.error('❌ Webhook verification failed:', error.message);
+      throw error;
     }
   }
- 
+
   /**
    * Update user metadata in Clerk
    */

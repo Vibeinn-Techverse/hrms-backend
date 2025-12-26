@@ -16,6 +16,7 @@ export const getEnv = {
 
   CLERK_SECRET_KEY: required("CLERK_SECRET_KEY"),
   CLERK_PUBLISHABLE_KEY: required("CLERK_PUBLISHABLE_KEY"),
+  CLERK_WEBHOOK_SECRET: required("CLERK_WEBHOOK_SECRET"),
 
   REDIS_URL: required("UPSTASH_REDIS_REST_URL"),
   REDIS_TOKEN: required("UPSTASH_REDIS_REST_TOKEN"),
@@ -30,4 +31,7 @@ export const getEnv = {
   S3_ACCESS_KEY: required("AWS_ACCESS_KEY_ID"),
   S3_SECRET_KEY: required("AWS_SECRET_ACCESS_KEY"),
   S3_BUCKET: required("S3_BUCKET_NAME"),
+
+  isDevelopment: () => process.env.NODE_ENV !== "production",
+  isProduction: () => process.env.NODE_ENV === "production",
 };
